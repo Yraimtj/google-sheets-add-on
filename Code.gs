@@ -246,15 +246,16 @@ function pushDataToCluster(
   var data_range_a1 = 'B22:D31';
   var doc_id_range_a1 = 'A:A';*/
 
+  /**if(!index) { throw "Index name cannot be empty." }*/
   if (!index) {
-    throw "Index name cannot be empty.";
+    index = "test-default";
   }
   if (index.indexOf(" ") >= 0) {
     throw "Index should not have spaces.";
   }
 
   if (!index_type) {
-    throw "Index type cannot be empty.";
+    index_type = "default-type";
   }
   if (index_type.indexOf(" ") >= 0) {
     throw "Index type should not have spaces.";
@@ -407,8 +408,6 @@ function pushDataToCluster(
     host.port,
     "/",
     index,
-    "/",
-    index_type,
     "/_search",
   ].join("");
 }
@@ -441,7 +440,6 @@ function createTemplate(host, index, template_name) {
   } catch (e) {
     throw "There was an issue creating the template. Please check the names of the template or index and try again.";
   }
-  console.log(resp.getResponseCode());
   if (resp.getResponseCode() == 404) {
     options = getDefaultOptions(host.username, host.password);
     options.method = "POST";
@@ -563,33 +561,23 @@ var default_template = {
     "index.analysis.analyzer.default.stopwords": "_none_",
   },
   mappings: {
-    _default_: {
-      dynamic_templates: [
-        {
-          string_fields: {
-            mapping: {
-              fields: {
-                "{name}": {
-                  index: "analyzed",
-                  omit_norms: true,
-                  type: "string",
-                },
-                raw: {
-                  search_analyzer: "keyword",
-                  ignore_above: 256,
-                  index: "not_analyzed",
-                  type: "string",
-                },
+    dynamic_templates: [
+      {
+        string_fields: {
+          mapping: {
+            fields: {
+              raw: {
+                type: "keyword",
+                ignore_above: 256,
               },
-              type: "multi_field",
             },
-            match_mapping_type: "string",
-            match: "*",
+            type: "text",
           },
+          match_mapping_type: "string",
+          match: "*",
         },
-      ],
-      _all: { enabled: true },
-    },
+      },
+    ],
   },
   aliases: {},
 };
