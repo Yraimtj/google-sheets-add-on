@@ -241,9 +241,9 @@ function pushDataToCluster(
   var host = getHostData();
   isValidHost(host);
 
-  /**var index = 'test-index2';
-  var index_type = 'test-type';
-  var data_range_a1 = 'B22:D31';
+  /**var index = 'test-default';
+  var index_type = 'default-type';
+  var data_range_a1 = 'A35:G35';
   var doc_id_range_a1 = 'A:A';*/
 
   /**if(!index) { throw "Index name cannot be empty." }*/
@@ -269,6 +269,10 @@ function pushDataToCluster(
     throw "Document data range cannot be empty.";
   }
 
+  if (!doc_id_range_a1) {
+    throw "Document data id range cannot be empty.";
+  }
+
   var data_range_array = data_range_a1.match(/[a-zA-Z]+|[0-9]+/g);
 
   var first_column = data_range_array[0];
@@ -286,6 +290,7 @@ function pushDataToCluster(
   if (data.length <= 0) {
     throw "No data to push.";
   }
+  Logger.log(data + "254");
 
   var headers;
   if (first_row === "1") {
@@ -310,7 +315,7 @@ function pushDataToCluster(
     if (!headers[i]) {
       throw "Document key name cannot be empty. Please make sure each cell in the document key names range has a value.";
     }
-    Logger.log(headers[i]);
+    /**Logger.log(headers[i]);*/
     headers[i] = headers[i].replace(/[^0-9a-zA-Z]/g, "_"); // clean up the column names for index keys
 
     headers[i] = headers[i].toLowerCase();
@@ -413,6 +418,147 @@ function pushDataToCluster(
 }
 
 /**
+ * Delete data in the cluster and also clear it in the spreadsheet.
+ *
+ * @param {Object} host The set of parameters needed to connect to a cluster - required.
+ * @param {String} index The index name - required.
+ * @param {String} index_type The index type - required.
+ * @param {String} template The name of the index template to use.
+ * @param {String} header_range The A1 notion of the header row.
+ * @param {String} data_range The A1 notion of the data rows.
+ */
+function deleteDataOnCluster(
+  index = "test-default",
+  index_type = "default-type",
+  template,
+  data_range_a1,
+  doc_id_range_a1
+) {
+  var host = getHostData();
+  isValidHost(host);
+
+  /**var index = 'test-default';
+  var index_type = 'default-type';
+  var data_range_a1 = 'A35:G35';
+  var doc_id_range_a1 = 'A:A';*/
+
+  /**if(!index) { throw "Index name cannot be empty." }
+  if(!index) {
+    index = 'test-default';
+  }*/
+  if (index.indexOf(" ") >= 0) {
+    throw "Index should not have spaces.";
+  }
+
+  /**if(!index_type) {
+    index_type = 'default-type';
+  }*/
+  if (index_type.indexOf(" ") >= 0) {
+    throw "Index type should not have spaces.";
+  }
+
+  if (template && template.indexOf(" ") >= 0) {
+    throw "Template name should not have spaces.";
+  }
+
+  if (!data_range_a1) {
+    throw "Document data range cannot be empty.";
+  }
+
+  if (!doc_id_range_a1) {
+    throw "Document data id range cannot be empty.";
+  }
+
+  var data_range_array = data_range_a1.match(/[a-zA-Z]+|[0-9]+/g);
+
+  var first_column = data_range_array[0];
+  var first_row = data_range_array[1];
+  var last_column = data_range_array[2];
+  var last_row = data_range_array[3];
+
+  var data_range = null;
+  try {
+    data_range = SpreadsheetApp.getActiveSheet().getRange(data_range_a1);
+  } catch (e) {
+    throw "The document data range entered was invalid. Please verify the range entered.";
+  }
+  var data = data_range.getValues();
+  if (data.length <= 0) {
+    throw "No data to push.";
+  }
+  Logger.log(data + "254");
+
+  var headers;
+  if (first_row === "1") {
+    throw "Can't Delete first row(headers) of this sheet.";
+  }
+
+  var doc_id_data = null;
+  if (doc_id_range_a1) {
+    var doc_id_range = null;
+    try {
+      doc_id_range = SpreadsheetApp.getActiveSheet().getRange(doc_id_range_a1);
+    } catch (e) {
+      throw "The document id column entered was invalid. Please verify the id column entered.";
+    }
+
+    if (first_row === "1") {
+      doc_id_range = doc_id_range.offset(
+        data_range.getRow(),
+        0,
+        data_range.getHeight() - 1
+      );
+    } else {
+      doc_id_range = doc_id_range.offset(
+        data_range.getRow() - 1,
+        0,
+        data_range.getHeight()
+      );
+    }
+    doc_id_data = doc_id_range.getValues();
+  }
+  /**Logger.log(doc_id_data);*/
+  var bulkList = [];
+
+  var did_send_some_data = false;
+  for (var r = 0; r < data.length; r++) {
+    if (doc_id_data) {
+      if (!doc_id_data[r][0]) {
+        throw "Missing document id for data row: " + (r + 1);
+      }
+      bulkList.push(
+        JSON.stringify({
+          delete: {
+            _index: index,
+            _type: "_doc",
+            _id: doc_id_data[r][0],
+            retry_on_conflict: 3,
+          },
+        })
+      );
+      /**bulkList.push(JSON.stringify({ doc: toInsert, detect_noop: true, doc_as_upsert: true }));*/
+    } else {
+      throw "Document data id range cannot be empty...";
+    }
+    did_send_some_data = true;
+    // Don't hit the UrlFetchApp limits of 10MB for POST calls.
+    if (bulkList.length >= 2000) {
+      postDataToES(host, bulkList.join("\n") + "\n");
+      bulkList = [];
+    }
+  }
+  Logger.log(bulkList.join("\n") + "\n");
+  if (bulkList.length > 0) {
+    postDataToES(host, bulkList.join("\n") + "\n");
+    did_send_some_data = true;
+  }
+  if (!did_send_some_data) {
+    throw "No data was sent to the cluster. Make sure your document key name and value ranges are valid.";
+  }
+  clearDataInRange(data_range_a1);
+  return data_range_a1;
+}
+/**
  * Creates a index template if required. If template already exists, it
  * does not update. If not, it uses default_template and the template name
  * to create a new one.
@@ -497,7 +643,7 @@ function postDataToES(host, data) {
   } catch (e) {
     throw "There was an error sending data to the cluster. Please check your connection details and data.";
   }
-  Logger.log(resp);
+  /**Logger.log(resp);*/
   if (resp.getResponseCode() != 200) {
     var jsonData = JSON.parse(resp.getContentText());
     if (jsonData.error) {
@@ -543,6 +689,21 @@ function isValidHost(host) {
   if (host.host == "localhost" || host.host == "0.0.0.0") {
     throw "Your cluster must be externally accessible to use this tool.";
   }
+}
+
+/**
+ * Helper function to clear the data range
+ * in the activeGoogle Sheets
+ *
+ */
+function clearDataInRange(data_range_a1) {
+  /**let data_range_a1 = 'A3:G4';*/
+  try {
+    data_range = SpreadsheetApp.getActiveSheet().getRange(data_range_a1);
+  } catch (e) {
+    throw "The document data range entered was invalid. Please verify the range entered.";
+  }
+  data_range.clearContent();
 }
 
 /**

@@ -9,6 +9,7 @@
     disableButtons();
     enableLoader();
     $("#sidebar-push-button").click(onPushClick);
+    $("#sidebar-delete-button").click(onDeleteClick);
     $("#sidebar-conn-details-button").click(onConnDetailsClick);
 
     $("#sidebar-docid-range").focus(updateDocIdColumns);
@@ -16,7 +17,8 @@
 
     google.script.run
       .withSuccessHandler(function (msg) {
-        getSheetName();
+        /**getSheetName();*/
+        $("#sidebar-index").val("test-default");
         getDefaultRange();
         $("#sidebar-type").val("spreadsheet");
         $("#sidebar-template").val("google_spreadsheet");
@@ -120,6 +122,42 @@
   }
 
   /**
+   * Get the click event to delete document
+   * in the cluster and clear the data in the
+   * spreadsheet
+   */
+  function onDeleteClick() {
+    disableDeleteButtons();
+    enableLoader();
+
+    var index = $("#sidebar-index").val();
+    var index_type = $("#sidebar-type").val();
+    var template_name = $("#sidebar-template").val();
+
+    var data_range = $("#sidebar-data-range").val();
+    var doc_id_range = $("#sidebar-docid-range").val();
+
+    google.script.run
+      .withSuccessHandler(function (msg) {
+        showStatus('Success! The data from "' + msg + '" was removed');
+        enableDeleteButtons();
+        disableLoader();
+      })
+      .withFailureHandler(function (msg) {
+        showStatus(msg, "error");
+        enableDeleteButtons();
+        disableLoader();
+      })
+      .deleteDataOnCluster(
+        index,
+        index_type,
+        template_name,
+        data_range,
+        doc_id_range
+      );
+  }
+
+  /**
    * Calls the server to modify the sheet.
    * Replace the currently selected cell value with the value in the
    * sidebar text field.
@@ -209,6 +247,14 @@
     if (classId) {
       $("#sidebar-status").addClass(classId);
     }
+  }
+
+  function disableDeleteButtons() {
+    $("#sidebar-delete-button").prop("disabled", true);
+  }
+
+  function enableDeleteButtons() {
+    $("#sidebar-delete-button").prop("disabled", false);
   }
 
   function disableButtons() {
