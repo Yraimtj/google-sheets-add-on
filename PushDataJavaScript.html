@@ -6,10 +6,11 @@
   var TIMER_TIMEOUT = 500;
 
   $(function () {
-    disableButtons();
+    disableButtons("#sidebar-push-button");
     enableLoader();
     $("#sidebar-push-button").click(onPushClick);
     $("#sidebar-delete-button").click(onDeleteClick);
+    $("#sidebar-delete-col-button").click(onDeleteColumnClick);
     $("#sidebar-conn-details-button").click(onConnDetailsClick);
 
     $("#sidebar-docid-range").focus(updateDocIdColumns);
@@ -21,11 +22,11 @@
         $("#sidebar-index").val("test-default");
         getDefaultRange();
         $("#sidebar-type").val("spreadsheet");
-        $("#sidebar-template").val("google_spreadsheet");
+        $("#sidebar-template").val(""); /**.val('google_spreadsheet')*/
         if (msg.was_checked === "0") {
           checkHost(msg);
         } else {
-          enableButtons();
+          enableButtons("#sidebar-push-button");
           disableLoader();
         }
       })
@@ -127,7 +128,7 @@
    * spreadsheet
    */
   function onDeleteClick() {
-    disableDeleteButtons();
+    disableButtons("#sidebar-delete-button");
     enableLoader();
 
     var index = $("#sidebar-index").val();
@@ -140,12 +141,12 @@
     google.script.run
       .withSuccessHandler(function (msg) {
         showStatus('Success! The data from "' + msg + '" was removed');
-        enableDeleteButtons();
+        enableButtons("#sidebar-delete-button");
         disableLoader();
       })
       .withFailureHandler(function (msg) {
         showStatus(msg, "error");
-        enableDeleteButtons();
+        enableButtons("#sidebar-delete-button");
         disableLoader();
       })
       .deleteDataOnCluster(
@@ -158,12 +159,107 @@
   }
 
   /**
+   * Get the click event to delete document
+   * in the cluster and clear the data in the
+   * spreadsheet
+   */
+  function onDeleteColumnClick() {
+    disableButtons("#sidebar-delete-col-button");
+    enableLoader();
+
+    var index = $("#sidebar-index").val();
+
+    var data_range = $("#sidebar-data-range").val();
+
+    google.script.run
+      .withSuccessHandler(function (msg) {
+        showStatus('Success! The data from "' + msg + '" was removed');
+        reindexUpdate();
+      })
+      .withFailureHandler(function (msg) {
+        showStatus(msg, "error");
+        enableButtons("#sidebar-delete-col-button");
+        disableLoader();
+      })
+      .deleteColumn(index, data_range);
+  }
+
+  function reindexUpdate() {
+    var index = $("#sidebar-index").val();
+    var tmp_index = "tmp_index";
+    google.script.run
+      .withSuccessHandler(function (msg) {
+        showStatus(
+          'Success! The data from index"' +
+            msg[0] +
+            '" was re-indexed to ' +
+            msg[1] +
+            "."
+        );
+        deleteOrigIndex();
+      })
+      .withFailureHandler(function (msg) {
+        showStatus(msg, "error");
+        enableButtons("#sidebar-delete-col-button");
+        disableLoader();
+      })
+      .reindexRequest(index, tmp_index);
+  }
+
+  function deleteOrigIndex() {
+    var index = $("#sidebar-index").val();
+    google.script.run
+      .withSuccessHandler(function (msg) {
+        showStatus('Success! The data from index"' + msg + '" was removed');
+        reCreateIndex();
+      })
+      .withFailureHandler(function (msg) {
+        showStatus(msg, "error");
+        enableButtons("#sidebar-delete-col-button");
+        disableLoader();
+      })
+      .deleteRequest(index);
+  }
+
+  function reCreateIndex() {
+    var index = "tmp_index";
+    var tmp_index = $("#sidebar-index").val();
+    google.script.run
+      .withSuccessHandler(function (msg) {
+        showStatus('Success! The data from "' + msg + '" was removed');
+        deleteTmpIndex();
+      })
+      .withFailureHandler(function (msg) {
+        showStatus(msg, "error");
+        enableButtons("#sidebar-delete-col-button");
+        disableLoader();
+      })
+      .reindexRequest(index, tmp_index);
+  }
+
+  function deleteTmpIndex() {
+    var index = "tmp_index";
+    google.script.run
+      .withSuccessHandler(function (msg) {
+        showStatus('Success! The data from "' + msg + '" was removed');
+        enableButtons("#sidebar-delete-col-button");
+        disableLoader();
+      })
+      .withFailureHandler(function (msg) {
+        showStatus(msg, "error");
+        enableButtons("#sidebar-delete-col-button");
+        disableLoader();
+      })
+      .deleteRequest(index);
+  }
+
+  /**
    * Calls the server to modify the sheet.
    * Replace the currently selected cell value with the value in the
    * sidebar text field.
    */
   function onPushClick() {
-    disableButtons();
+    disableButtons("#sidebar-push-button");
     enableLoader();
 
     var index = $("#sidebar-index").val();
@@ -180,12 +276,12 @@
             msg +
             '" target="_blank">here.</a>'
         );
-        enableButtons();
+        enableButtons("#sidebar-push-button");
         disableLoader();
       })
       .withFailureHandler(function (msg) {
         showStatus(msg, "error");
-        enableButtons();
+        enableButtons("#sidebar-push-button");
         disableLoader();
       })
       .pushDataToCluster(
@@ -212,7 +308,7 @@
   function checkHost(host) {
     google.script.run
       .withSuccessHandler(function (msg) {
-        enableButtons();
+        enableButtons("#sidebar-push-button");
         disableLoader();
       })
       .withFailureHandler(function (msg) {
@@ -220,7 +316,7 @@
           "Could not connect to your cluster. Please test the connection details.",
           "error"
         );
-        disableButtons();
+        disableButtons("#sidebar-push-button");
         disableLoader();
       })
       .checkClusterConnection(host);
@@ -249,20 +345,12 @@
     }
   }
 
-  function disableDeleteButtons() {
-    $("#sidebar-delete-button").prop("disabled", true);
+  function disableButtons(buttonId) {
+    $(buttonId).prop("disabled", true);
   }
 
-  function enableDeleteButtons() {
-    $("#sidebar-delete-button").prop("disabled", false);
-  }
-
-  function disableButtons() {
-    $("#sidebar-push-button").prop("disabled", true);
-  }
-
-  function enableButtons() {
-    $("#sidebar-push-button").prop("disabled", false);
+  function enableButtons(buttonId) {
+    $(buttonId).prop("disabled", false);
   }
 
   function enableLoader() {
@@ -277,7 +365,7 @@
 
   function failure(msg) {
     showStatus(msg, "error");
-    enableButtons();
+    enableButtons("#sidebar-push-button");
     disableLoader();
   }
 
@@ -288,7 +376,7 @@
         if (!$("#sidebar-data-range").val()) {
           $("#sidebar-data-range").val(msg);
         }
-        enableButtons();
+        enableButtons("#sidebar-push-button");
         disableLoader();
       })
       .withFailureHandler(function (msg) {

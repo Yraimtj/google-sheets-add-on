@@ -241,12 +241,11 @@ function pushDataToCluster(
   var host = getHostData();
   isValidHost(host);
 
-  /**var index = 'test-default';
+  /**var index = 'test-index';
   var index_type = 'default-type';
-  var data_range_a1 = 'A35:G35';
+  var data_range_a1 = 'B1:G35';
   var doc_id_range_a1 = 'A:A';*/
 
-  /**if(!index) { throw "Index name cannot be empty." }*/
   if (!index) {
     index = "test-default";
   }
@@ -290,11 +289,10 @@ function pushDataToCluster(
   if (data.length <= 0) {
     throw "No data to push.";
   }
-  Logger.log(data + "254");
+  Logger.log(data[0]);
 
   var headers;
   if (first_row === "1") {
-    /**Logger.log(data);*/
     headers = data.shift();
   } else {
     headers_range = `${first_column}1:${last_column}1`;
@@ -307,15 +305,10 @@ function pushDataToCluster(
     }
   }
 
-  /**Logger.log(data);
-  Logger.log(headers);
-  /** var headers = data.shift();*/
-
   for (var i in headers) {
     if (!headers[i]) {
       throw "Document key name cannot be empty. Please make sure each cell in the document key names range has a value.";
     }
-    /**Logger.log(headers[i]);*/
     headers[i] = headers[i].replace(/[^0-9a-zA-Z]/g, "_"); // clean up the column names for index keys
 
     headers[i] = headers[i].toLowerCase();
@@ -348,7 +341,7 @@ function pushDataToCluster(
     }
     doc_id_data = doc_id_range.getValues();
   }
-  /**Logger.log(doc_id_data);*/
+
   var bulkList = [];
   if (template) {
     createTemplate(host, index, template);
@@ -398,7 +391,7 @@ function pushDataToCluster(
       }
     }
   }
-  Logger.log(bulkList.join("\n") + "\n");
+
   if (bulkList.length > 0) {
     postDataToES(host, bulkList.join("\n") + "\n");
     did_send_some_data = true;
@@ -434,7 +427,7 @@ function deleteDataOnCluster(
   data_range_a1,
   doc_id_range_a1
 ) {
-  var host = getHostData();
+  let host = getHostData();
   isValidHost(host);
 
   /**var index = 'test-default';
@@ -442,17 +435,10 @@ function deleteDataOnCluster(
   var data_range_a1 = 'A35:G35';
   var doc_id_range_a1 = 'A:A';*/
 
-  /**if(!index) { throw "Index name cannot be empty." }
-  if(!index) {
-    index = 'test-default';
-  }*/
   if (index.indexOf(" ") >= 0) {
     throw "Index should not have spaces.";
   }
 
-  /**if(!index_type) {
-    index_type = 'default-type';
-  }*/
   if (index_type.indexOf(" ") >= 0) {
     throw "Index type should not have spaces.";
   }
@@ -488,7 +474,6 @@ function deleteDataOnCluster(
   }
   Logger.log(data + "254");
 
-  var headers;
   if (first_row === "1") {
     throw "Can't Delete first row(headers) of this sheet.";
   }
@@ -517,7 +502,7 @@ function deleteDataOnCluster(
     }
     doc_id_data = doc_id_range.getValues();
   }
-  /**Logger.log(doc_id_data);*/
+
   var bulkList = [];
 
   var did_send_some_data = false;
@@ -536,7 +521,6 @@ function deleteDataOnCluster(
           },
         })
       );
-      /**bulkList.push(JSON.stringify({ doc: toInsert, detect_noop: true, doc_as_upsert: true }));*/
     } else {
       throw "Document data id range cannot be empty...";
     }
@@ -558,6 +542,69 @@ function deleteDataOnCluster(
   clearDataInRange(data_range_a1);
   return data_range_a1;
 }
+
+/**
+ * Remove column in the spreadsheet and field in the cluster.
+ */
+function deleteColumn(index, col_range) {
+  var host = getHostData();
+  isValidHost(host);
+
+  /**var index = 'test-default';
+
+  var col_range = 'C1:G12';*/
+
+  if (index.indexOf(" ") >= 0) {
+    throw "Index should not have spaces.";
+  }
+
+  if (!col_range) {
+    throw "Document data range cannot be empty.";
+  }
+
+  let data_range_array = col_range.match(/[a-zA-Z]+|[0-9]+/g);
+
+  let first_column = data_range_array[0];
+  let first_row = data_range_array[1];
+  let last_column = data_range_array[2];
+  let last_row = data_range_array[3];
+
+  if (first_column === "A") {
+    throw "Can't delete id Column. Please verify the range entered. ";
+  }
+
+  let firstRowIsALetter = /[a-zA-Z]/.test(first_row);
+
+  let firstRowNotSelected = (first_row !== "1") & !firstRowIsALetter;
+
+  if (firstRowNotSelected) {
+    throw "The document data range entered was invalid. Need to select first row of the column or all the column";
+  }
+
+  if (firstRowIsALetter) {
+    col_range = `${first_column}:${first_row}`;
+  } else {
+    col_range = `${first_column}:${last_column}`;
+  }
+
+  let data_range_col = null;
+  try {
+    data_range_col = SpreadsheetApp.getActiveSheet()
+      .getRange(col_range)
+      .getValues();
+  } catch (e) {
+    throw "The document data range entered was invalid. Please verify the range entered.";
+  }
+
+  let headers_name = data_range_col[0];
+
+  updateByQueryRequest(index, headers_name, host);
+
+  clearDataInRange(col_range);
+
+  return col_range;
+}
+
 /**
  * Creates a index template if required. If template already exists, it
  * does not update. If not, it uses default_template and the template name
@@ -643,7 +690,6 @@ function postDataToES(host, data) {
   } catch (e) {
     throw "There was an error sending data to the cluster. Please check your connection details and data.";
   }
-  /**Logger.log(resp);*/
   if (resp.getResponseCode() != 200) {
     var jsonData = JSON.parse(resp.getContentText());
     if (jsonData.error) {
@@ -655,6 +701,85 @@ function postDataToES(host, data) {
     throw "Your cluster returned an unknown error. Please check your connection details and data.";
   }
 }
+
+const updateByQueryRequest = function (index, headers_name, host) {
+  let url = [
+    host.use_ssl ? "https://" : "http://",
+    host.host,
+    ":",
+    host.port,
+    "/",
+    index,
+    "/_update_by_query?conflicts=proceed",
+  ].join("");
+
+  let scripts = "";
+  let querys = { bool: { should: [] } };
+  headers_name.forEach((headerName) => {
+    headerName = headerName.toLowerCase();
+    scripts += `ctx._source.remove("${headerName}");`;
+    querys["bool"]["should"].push({ exists: { field: headerName } });
+  });
+
+  let data = JSON.stringify({ script: scripts, query: querys });
+
+  let options = getDefaultOptions(host.username, host.password);
+  options.method = "POST";
+  options["payload"] = data;
+  options.headers["Content-Type"] = "application/x-ndjson";
+  options["muteHttpExceptions"] = true;
+
+  let test = UrlFetchApp.fetch(url, options);
+};
+
+const deleteRequest = function (index) {
+  var host = getHostData();
+  isValidHost(host);
+
+  let url = [
+    host.use_ssl ? "https://" : "http://",
+    host.host,
+    ":",
+    host.port,
+    "/",
+    index,
+  ].join("");
+  let options = getDefaultOptions(host.username, host.password);
+  options.method = "DELETE";
+  options.headers["Content-Type"] = "application/x-ndjson";
+  options["muteHttpExceptions"] = true;
+
+  UrlFetchApp.fetch(url, options);
+
+  return index;
+};
+
+const reindexRequest = function (index, tmp_index) {
+  var host = getHostData();
+  isValidHost(host);
+
+  let url = [
+    host.use_ssl ? "https://" : "http://",
+    host.host,
+    ":",
+    host.port,
+    "/_reindex",
+  ].join("");
+  let data = JSON.stringify({
+    source: { index: index },
+    dest: { index: tmp_index },
+  });
+
+  let options = getDefaultOptions(host.username, host.password);
+  options.method = "POST";
+  options["payload"] = data;
+  options.headers["Content-Type"] = "application/x-ndjson";
+  options["muteHttpExceptions"] = true;
+
+  UrlFetchApp.fetch(url, options);
+
+  return [index, tmp_index];
+};
 
 /**
  * Helper function to get the default UrlFetchApp parameters
@@ -697,7 +822,6 @@ function isValidHost(host) {
  *
  */
 function clearDataInRange(data_range_a1) {
-  /**let data_range_a1 = 'A3:G4';*/
   try {
     data_range = SpreadsheetApp.getActiveSheet().getRange(data_range_a1);
   } catch (e) {
