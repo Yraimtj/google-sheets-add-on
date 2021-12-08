@@ -7,12 +7,12 @@
  *
  * @param {Object} e The event parameter for a simple onOpen trigger.
  */
-function onOpen(e) {
+const onOpen = function (e) {
   SpreadsheetApp.getUi()
     .createAddonMenu()
     .addItem("Send To Cluster...", "showPushDataSidebar")
     .addToUi();
-}
+};
 
 /**
  * Runs when the add-on is installed; calls onOpen() to ensure menu creation and
@@ -20,20 +20,20 @@ function onOpen(e) {
  *
  * @param {Object} e The event parameter for a simple onInstall trigger.
  */
-function onInstall(e) {
+const onInstall = function (e) {
   onOpen(e);
-}
+};
 
 /**
  * Opens a sidebar. The sidebar structure is described in the Sidebar.html
  * project file.
  */
-function showPushDataSidebar() {
-  var ui = HtmlService.createTemplateFromFile("ConnectionDetailsSidebar")
+const showPushDataSidebar = function () {
+  let ui = HtmlService.createTemplateFromFile("ConnectionDetailsSidebar")
     .evaluate()
     .setTitle("Send Data To Cluster");
   SpreadsheetApp.getUi().showSidebar(ui);
-}
+};
 
 /**
  * Checks to see if the cluster is accessible by calling /_status
@@ -41,21 +41,21 @@ function showPushDataSidebar() {
  *
  * @param {Object} host The set of parameters needed to connect to a cluster.
  */
-function checkClusterConnection(host) {
+const checkClusterConnection = function (host) {
   isValidHost(host);
-  var url = [
+  let url = [
     host.use_ssl ? "https://" : "http://",
     host.host,
     ":",
     host.port,
     "/",
   ].join("");
-  var options = getDefaultOptions(host.username, host.password);
+  let options = getDefaultOptions(host.username, host.password);
   options["muteHttpExceptions"] = true;
   try {
-    var resp = UrlFetchApp.fetch(url, options);
+    let resp = UrlFetchApp.fetch(url, options);
     if (resp.getResponseCode() != 200) {
-      var jsonData = JSON.parse(resp.getContentText());
+      let jsonData = JSON.parse(resp.getContentText());
       if (jsonData.message == "forbidden") {
         throw "The username and/or password is incorrect.";
       }
@@ -64,22 +64,22 @@ function checkClusterConnection(host) {
   } catch (e) {
     throw "There was a problem connecting to your cluster. Please the connection details and try again.";
   }
-}
+};
 
-function clearData() {
-  var userProperties = PropertiesService.getUserProperties();
+const clearData = function () {
+  let userProperties = PropertiesService.getUserProperties();
   userProperties.deleteAllProperties();
-}
+};
 
-function saveHostData(host) {
+const saveHostData = function (host) {
   isValidHost(host);
-  var userProperties = PropertiesService.getUserProperties();
+  let userProperties = PropertiesService.getUserProperties();
   userProperties.setProperties(host);
-}
+};
 
-function getHostData() {
-  var userProperties = PropertiesService.getUserProperties();
-  var data = userProperties.getProperties();
+const getHostData = function () {
+  let userProperties = PropertiesService.getUserProperties();
+  let data = userProperties.getProperties();
   return {
     host: data["host"],
     port: data["port"],
@@ -91,29 +91,29 @@ function getHostData() {
     password: data["password"],
     was_checked: data["was_checked"],
   };
-}
+};
 
 /**
  * Returns a clean name to use as an index based on the sheet name
  *
  */
-function getSheetName() {
+const getSheetName = function () {
   try {
-    var name = SpreadsheetApp.getActiveSheet().getName();
+    let name = SpreadsheetApp.getActiveSheet().getName();
     return name.replace(/[^0-9a-zA-Z]/g, "_").toLowerCase();
   } catch (e) {
     return "";
   }
-}
+};
 
 /**
  * Highlights the cells in the A1 range
  * @param {String} a1_range A1 notation for the cells to highlight - required.
  */
-function highlightData(a1_range) {
-  var sheet = SpreadsheetApp.getActiveSheet();
+const highlightData = function (a1_range) {
+  let sheet = SpreadsheetApp.getActiveSheet();
   try {
-    var range = sheet.getRange(a1_range);
+    let range = sheet.getRange(a1_range);
     if (a1_range.length == 3) {
       sheet.setActiveSelection(
         sheet.getRange(range.getRow(), range.getColumn(), range.getHeight())
@@ -124,16 +124,16 @@ function highlightData(a1_range) {
   } catch (e) {
     throw "The range entered was invalid. Please verify the range entered.";
   }
-}
+};
 
 /**
  * Gets the default locations for headers and data, namely the first row
  * and all other rows.
  */
-function getDefaultRange() {
+const getDefaultRange = function () {
   try {
-    var sheet = SpreadsheetApp.getActiveSheet();
-    var data_range = sheet.getRange(
+    let sheet = SpreadsheetApp.getActiveSheet();
+    let data_range = sheet.getRange(
       1,
       1,
       sheet.getLastRow(),
@@ -143,54 +143,42 @@ function getDefaultRange() {
   } catch (e) {
     throw "There is no data in the sheet.";
   }
-}
+};
 
-function getSelectedRange() {
+const getSelectedRange = function () {
   try {
-    var sheet = SpreadsheetApp.getActiveSheet();
+    let sheet = SpreadsheetApp.getActiveSheet();
     return sheet.getActiveRange().getA1Notation();
   } catch (e) {
     throw "No range selected.";
   }
-}
-
-function getDocIdOptions() {
-  var data_width = SpreadsheetApp.getActiveSheet().getDataRange().getWidth();
-  var options = [];
-  for (var i = 1; i <= data_width; i++) {
-    options.push({
-      value: String.fromCharCode(64 + i) + ":" + String.fromCharCode(64 + i),
-      text: String.fromCharCode(64 + i),
-    });
-  }
-  return options;
-}
+};
 
 /**
  * Attempts to validate that the data in each column is the same format.
  * If something isn't the same, it adds a note to the sheet and throws an
  * exception.
  */
-function validateData(new_value) {
-  var sheet = SpreadsheetApp.getActiveSheet();
-  var range = null;
+const validateData = function (new_value) {
+  let sheet = SpreadsheetApp.getActiveSheet();
+  let range = null;
   try {
     range = sheet.getRange(new_value);
   } catch (e) {
     throw "There is no data in the sheet.";
   }
   clearNotes();
-  var start_row = parseInt(range.getRow()) + 1;
-  var start_col = parseInt(range.getColumn());
-  var formats = range.getNumberFormats();
+  let start_row = parseInt(range.getRow()) + 1;
+  let start_col = parseInt(range.getColumn());
+  let formats = range.getNumberFormats();
   formats.shift();
-  var header_formats = formats.shift();
-  for (var r in formats) {
-    for (var c in formats[r]) {
+  let header_formats = formats.shift();
+  for (let r in formats) {
+    for (let c in formats[r]) {
       if (formats[r][c] != header_formats[c]) {
-        var note_row = start_row + 1 + parseInt(r);
-        var note_col = start_col + parseInt(c);
-        var cell = sheet.getRange(note_row, note_col);
+        let note_row = start_row + 1 + parseInt(r);
+        let note_col = start_col + parseInt(c);
+        let cell = sheet.getRange(note_row, note_col);
         cell.setNote(
           "Not the same format as first row. This may cause data to not be inserted into your cluster. ~SpreadsheetToES"
         );
@@ -198,18 +186,18 @@ function validateData(new_value) {
       }
     }
   }
-}
+};
 
 /**
  * Attempts to clear only the notes that we've made
  */
-function clearNotes() {
-  var sheet = SpreadsheetApp.getActiveSheet();
-  var notes_range = sheet
+const clearNotes = function () {
+  let sheet = SpreadsheetApp.getActiveSheet();
+  let notes_range = sheet
     .getRange(1, 1, sheet.getMaxRows(), sheet.getMaxColumns())
     .getNotes();
-  for (var r in notes_range) {
-    for (var c in notes_range[r]) {
+  for (let r in notes_range) {
+    for (let c in notes_range[r]) {
       if (
         notes_range[r][c] &&
         notes_range[r][c].indexOf("~SpreadsheetToES") >= 0
@@ -218,7 +206,7 @@ function clearNotes() {
       }
     }
   }
-}
+};
 
 /**
  * Pushes data from the spreadsheet to the cluster.
@@ -231,67 +219,27 @@ function clearNotes() {
  * @param {String} data_range The A1 notion of the data rows.
  */
 
-function pushDataToCluster(
-  index,
-  index_type,
+const pushDataToCluster = function (
+  index = "test-default",
+  index_type = "default-type",
   template,
-  data_range_a1,
-  doc_id_range_a1
+  data_range_a1
 ) {
-  var host = getHostData();
+  let host = getHostData();
   isValidHost(host);
 
-  /**var index = 'test-index';
-  var index_type = 'default-type';
-  var data_range_a1 = 'B1:G35';
-  var doc_id_range_a1 = 'A:A';*/
+  let doc_id_range_a1 = "A:A";
 
-  if (!index) {
-    index = "test-default";
-  }
-  if (index.indexOf(" ") >= 0) {
-    throw "Index should not have spaces.";
-  }
+  checkInput(index, index_type, template, data_range_a1);
 
-  if (!index_type) {
-    index_type = "default-type";
-  }
-  if (index_type.indexOf(" ") >= 0) {
-    throw "Index type should not have spaces.";
-  }
+  let [first_column, first_row, last_column, last_row] =
+    data_range_a1.match(/[a-zA-Z]+|[0-9]+/g);
 
-  if (template && template.indexOf(" ") >= 0) {
-    throw "Template name should not have spaces.";
-  }
+  let [data, data_range] = getDataRange(data_range_a1);
 
-  if (!data_range_a1) {
-    throw "Document data range cannot be empty.";
-  }
+  let doc_id_data = getDocIdData(doc_id_range_a1, data_range);
 
-  if (!doc_id_range_a1) {
-    throw "Document data id range cannot be empty.";
-  }
-
-  var data_range_array = data_range_a1.match(/[a-zA-Z]+|[0-9]+/g);
-
-  var first_column = data_range_array[0];
-  var first_row = data_range_array[1];
-  var last_column = data_range_array[2];
-  var last_row = data_range_array[3];
-
-  var data_range = null;
-  try {
-    data_range = SpreadsheetApp.getActiveSheet().getRange(data_range_a1);
-  } catch (e) {
-    throw "The document data range entered was invalid. Please verify the range entered.";
-  }
-  var data = data_range.getValues();
-  if (data.length <= 0) {
-    throw "No data to push.";
-  }
-  Logger.log(data[0]);
-
-  var headers;
+  let headers;
   if (first_row === "1") {
     headers = data.shift();
   } else {
@@ -305,7 +253,7 @@ function pushDataToCluster(
     }
   }
 
-  for (var i in headers) {
+  for (let i in headers) {
     if (!headers[i]) {
       throw "Document key name cannot be empty. Please make sure each cell in the document key names range has a value.";
     }
@@ -317,40 +265,15 @@ function pushDataToCluster(
     }
   }
 
-  var doc_id_data = null;
-  if (doc_id_range_a1) {
-    var doc_id_range = null;
-    try {
-      doc_id_range = SpreadsheetApp.getActiveSheet().getRange(doc_id_range_a1);
-    } catch (e) {
-      throw "The document id column entered was invalid. Please verify the id column entered.";
-    }
-
-    if (first_row === "1") {
-      doc_id_range = doc_id_range.offset(
-        data_range.getRow(),
-        0,
-        data_range.getHeight() - 1
-      );
-    } else {
-      doc_id_range = doc_id_range.offset(
-        data_range.getRow() - 1,
-        0,
-        data_range.getHeight()
-      );
-    }
-    doc_id_data = doc_id_range.getValues();
-  }
-
-  var bulkList = [];
+  let bulkList = [];
   if (template) {
     createTemplate(host, index, template);
   }
-  var did_send_some_data = false;
-  for (var r = 0; r < data.length; r++) {
-    var row = data[r];
-    var toInsert = {};
-    for (var c = 0; c < row.length; c++) {
+  let did_send_some_data = false;
+  for (let r = 0; r < data.length; r++) {
+    let row = data[r];
+    let toInsert = {};
+    for (let c = 0; c < row.length; c++) {
       if (row[c]) {
         toInsert[headers[c]] = row[c];
       }
@@ -408,33 +331,9 @@ function pushDataToCluster(
     index,
     "/_search",
   ].join("");
-}
+};
 
-/**
- * Delete data in the cluster and also clear it in the spreadsheet.
- *
- * @param {Object} host The set of parameters needed to connect to a cluster - required.
- * @param {String} index The index name - required.
- * @param {String} index_type The index type - required.
- * @param {String} template The name of the index template to use.
- * @param {String} header_range The A1 notion of the header row.
- * @param {String} data_range The A1 notion of the data rows.
- */
-function deleteDataOnCluster(
-  index = "test-default",
-  index_type = "default-type",
-  template,
-  data_range_a1,
-  doc_id_range_a1
-) {
-  let host = getHostData();
-  isValidHost(host);
-
-  /**var index = 'test-default';
-  var index_type = 'default-type';
-  var data_range_a1 = 'A35:G35';
-  var doc_id_range_a1 = 'A:A';*/
-
+const checkInput = function (index, index_type, template, data_range_a1) {
   if (index.indexOf(" ") >= 0) {
     throw "Index should not have spaces.";
   }
@@ -450,63 +349,86 @@ function deleteDataOnCluster(
   if (!data_range_a1) {
     throw "Document data range cannot be empty.";
   }
+};
 
-  if (!doc_id_range_a1) {
-    throw "Document data id range cannot be empty.";
-  }
-
-  var data_range_array = data_range_a1.match(/[a-zA-Z]+|[0-9]+/g);
-
-  var first_column = data_range_array[0];
-  var first_row = data_range_array[1];
-  var last_column = data_range_array[2];
-  var last_row = data_range_array[3];
-
-  var data_range = null;
+const getDataRange = function (data_range_a1) {
+  let data_range = null;
   try {
     data_range = SpreadsheetApp.getActiveSheet().getRange(data_range_a1);
   } catch (e) {
     throw "The document data range entered was invalid. Please verify the range entered.";
   }
-  var data = data_range.getValues();
+  let data = data_range.getValues();
+
   if (data.length <= 0) {
     throw "No data to push.";
   }
-  Logger.log(data + "254");
+  return [data, data_range];
+};
+
+const getDocIdData = function (doc_id_range_a1, data_range) {
+  let doc_id_data;
+  let doc_id_range = null;
+  try {
+    doc_id_range = SpreadsheetApp.getActiveSheet().getRange(doc_id_range_a1);
+  } catch (e) {
+    throw "The document id column entered was invalid. Please verify the id column entered.";
+  }
+
+  if (first_row === "1") {
+    doc_id_range = doc_id_range.offset(
+      data_range.getRow(),
+      0,
+      data_range.getHeight() - 1
+    );
+  } else {
+    doc_id_range = doc_id_range.offset(
+      data_range.getRow() - 1,
+      0,
+      data_range.getHeight()
+    );
+  }
+  doc_id_data = doc_id_range.getValues();
+  return doc_id_data;
+};
+/**
+ * Delete data in the cluster and also clear it in the spreadsheet.
+ *
+ * @param {Object} host The set of parameters needed to connect to a cluster - required.
+ * @param {String} index The index name - required.
+ * @param {String} index_type The index type - required.
+ * @param {String} template The name of the index template to use.
+ * @param {String} header_range The A1 notion of the header row.
+ * @param {String} data_range The A1 notion of the data rows.
+ */
+const deleteRow = function (
+  index = "test-default",
+  index_type = "default-type",
+  template,
+  data_range_a1
+) {
+  let host = getHostData();
+  isValidHost(host);
+
+  let doc_id_range_a1 = "A:A";
+
+  checkInput(index, index_type, template, data_range_a1);
+
+  let [first_column, first_row, last_column, last_row] =
+    data_range_a1.match(/[a-zA-Z]+|[0-9]+/g);
+
+  let [data, data_range] = getDataRange(data_range_a1);
+
+  let doc_id_data = getDocIdData(doc_id_range_a1, data_range);
 
   if (first_row === "1") {
     throw "Can't Delete first row(headers) of this sheet.";
   }
 
-  var doc_id_data = null;
-  if (doc_id_range_a1) {
-    var doc_id_range = null;
-    try {
-      doc_id_range = SpreadsheetApp.getActiveSheet().getRange(doc_id_range_a1);
-    } catch (e) {
-      throw "The document id column entered was invalid. Please verify the id column entered.";
-    }
+  let bulkList = [];
 
-    if (first_row === "1") {
-      doc_id_range = doc_id_range.offset(
-        data_range.getRow(),
-        0,
-        data_range.getHeight() - 1
-      );
-    } else {
-      doc_id_range = doc_id_range.offset(
-        data_range.getRow() - 1,
-        0,
-        data_range.getHeight()
-      );
-    }
-    doc_id_data = doc_id_range.getValues();
-  }
-
-  var bulkList = [];
-
-  var did_send_some_data = false;
-  for (var r = 0; r < data.length; r++) {
+  let did_send_some_data = false;
+  for (let r = 0; r < data.length; r++) {
     if (doc_id_data) {
       if (!doc_id_data[r][0]) {
         throw "Missing document id for data row: " + (r + 1);
@@ -531,7 +453,7 @@ function deleteDataOnCluster(
       bulkList = [];
     }
   }
-  Logger.log(bulkList.join("\n") + "\n");
+
   if (bulkList.length > 0) {
     postDataToES(host, bulkList.join("\n") + "\n");
     did_send_some_data = true;
@@ -541,18 +463,14 @@ function deleteDataOnCluster(
   }
   clearDataInRange(data_range_a1);
   return data_range_a1;
-}
+};
 
 /**
  * Remove column in the spreadsheet and field in the cluster.
  */
-function deleteColumn(index, col_range) {
-  var host = getHostData();
+const deleteColumn = function (index, col_range) {
+  let host = getHostData();
   isValidHost(host);
-
-  /**var index = 'test-default';
-
-  var col_range = 'C1:G12';*/
 
   if (index.indexOf(" ") >= 0) {
     throw "Index should not have spaces.";
@@ -562,12 +480,8 @@ function deleteColumn(index, col_range) {
     throw "Document data range cannot be empty.";
   }
 
-  let data_range_array = col_range.match(/[a-zA-Z]+|[0-9]+/g);
-
-  let first_column = data_range_array[0];
-  let first_row = data_range_array[1];
-  let last_column = data_range_array[2];
-  let last_row = data_range_array[3];
+  let [first_column, first_row, last_column, last_row] =
+    data_range_a1.match(/[a-zA-Z]+|[0-9]+/g);
 
   if (first_column === "A") {
     throw "Can't delete id Column. Please verify the range entered. ";
@@ -603,7 +517,7 @@ function deleteColumn(index, col_range) {
   clearDataInRange(col_range);
 
   return col_range;
-}
+};
 
 /**
  * Creates a index template if required. If template already exists, it
@@ -614,9 +528,8 @@ function deleteColumn(index, col_range) {
  * @param {String} index The index name - required.
  * @param {String} template_name The name of the index template to use - required.
  */
-function createTemplate(host, index, template_name) {
-  Logger.log(typeof host.use_ssl);
-  var url = [
+const createTemplate = function (host, index, template_name) {
+  let url = [
     host.use_ssl ? "https://" : "http://",
     host.host,
     ":",
@@ -624,12 +537,12 @@ function createTemplate(host, index, template_name) {
     "/_template/",
     template_name,
   ].join("");
-  Logger.log(url);
-  var options = getDefaultOptions(host.username, host.password);
+
+  let options = getDefaultOptions(host.username, host.password);
   options["muteHttpExceptions"] = true;
-  var resp = null;
+  let resp = null;
   try {
-    var resp = UrlFetchApp.fetch(url, options);
+    let resp = UrlFetchApp.fetch(url, options);
   } catch (e) {
     throw "There was an issue creating the template. Please check the names of the template or index and try again.";
   }
@@ -647,13 +560,13 @@ function createTemplate(host, index, template_name) {
       throw "There was an issue creating the template. Please check the names of the template or index and try again.";
     }
     if (resp.getResponseCode() != 200) {
-      var jsonData = JSON.parse(resp.getContentText());
+      let jsonData = JSON.parse(resp.getContentText());
       throw jsonData.message;
     }
   } else if (resp.getResponseCode() == 200) {
-    var jsonResp = JSON.parse(resp.getContentText());
+    let jsonResp = JSON.parse(resp.getContentText());
     if (jsonResp[template_name].template) {
-      var re = new RegExp(jsonResp[template_name].template);
+      let re = new RegExp(jsonResp[template_name].template);
       if (!re.test(index)) {
         throw (
           "The template specified will only be applied to indices matching the following naming pattern: '" +
@@ -663,7 +576,7 @@ function createTemplate(host, index, template_name) {
       }
     }
   }
-}
+};
 
 /**
  * Posts data to the ES cluster using the /_bulk endpoint
@@ -671,27 +584,27 @@ function createTemplate(host, index, template_name) {
  * @param {Object} host The set of parameters needed to connect to a cluster - required.
  * @param {Array} data The data to push in an array of JSON strings - required.
  */
-function postDataToES(host, data) {
-  var url = [
+const postDataToES = function (host, data) {
+  let url = [
     host.use_ssl ? "https://" : "http://",
     host.host,
     ":",
     host.port,
     "/_bulk",
   ].join("");
-  var options = getDefaultOptions(host.username, host.password);
+  let options = getDefaultOptions(host.username, host.password);
   options.method = "POST";
   options["payload"] = data;
   options.headers["Content-Type"] = "application/x-ndjson";
   options["muteHttpExceptions"] = true;
-  var resp = null;
+  let resp = null;
   try {
     resp = UrlFetchApp.fetch(url, options);
   } catch (e) {
     throw "There was an error sending data to the cluster. Please check your connection details and data.";
   }
   if (resp.getResponseCode() != 200) {
-    var jsonData = JSON.parse(resp.getContentText());
+    let jsonData = JSON.parse(resp.getContentText());
     if (jsonData.error) {
       if (jsonData.error.indexOf("AuthenticationException") >= 0) {
         throw "The username and/or password is incorrect.";
@@ -700,7 +613,7 @@ function postDataToES(host, data) {
     }
     throw "Your cluster returned an unknown error. Please check your connection details and data.";
   }
-}
+};
 
 const updateByQueryRequest = function (index, headers_name, host) {
   let url = [
@@ -729,11 +642,11 @@ const updateByQueryRequest = function (index, headers_name, host) {
   options.headers["Content-Type"] = "application/x-ndjson";
   options["muteHttpExceptions"] = true;
 
-  let test = UrlFetchApp.fetch(url, options);
+  UrlFetchApp.fetch(url, options);
 };
 
 const deleteRequest = function (index) {
-  var host = getHostData();
+  let host = getHostData();
   isValidHost(host);
 
   let url = [
@@ -755,7 +668,7 @@ const deleteRequest = function (index) {
 };
 
 const reindexRequest = function (index, tmp_index) {
-  var host = getHostData();
+  let host = getHostData();
   isValidHost(host);
 
   let url = [
@@ -787,8 +700,8 @@ const reindexRequest = function (index, tmp_index) {
  * @param {String} username The username for basic auth.
  * @param {String} password The password for basic auth.
  */
-function getDefaultOptions(username, password) {
-  var options = {
+const getDefaultOptions = function (username, password) {
+  let options = {
     method: "GET",
     headers: {},
   };
@@ -797,14 +710,14 @@ function getDefaultOptions(username, password) {
       "Basic " + Utilities.base64Encode(username + ":" + password);
   }
   return options;
-}
+};
 
 /**
  * Helper function to validate the host object
  *
  * @param {Object} host The set of parameters needed to connect to a cluster - required.
  */
-function isValidHost(host) {
+const isValidHost = function (host) {
   if (!host) {
     throw "Cluster details cannot be empty.";
   }
@@ -814,28 +727,28 @@ function isValidHost(host) {
   if (host.host == "localhost" || host.host == "0.0.0.0") {
     throw "Your cluster must be externally accessible to use this tool.";
   }
-}
+};
 
 /**
  * Helper function to clear the data range
  * in the activeGoogle Sheets
  *
  */
-function clearDataInRange(data_range_a1) {
+const clearDataInRange = function (data_range_a1) {
   try {
     data_range = SpreadsheetApp.getActiveSheet().getRange(data_range_a1);
   } catch (e) {
     throw "The document data range entered was invalid. Please verify the range entered.";
   }
   data_range.clearContent();
-}
+};
 
 /**
  * This is the default template to use. The template ke will
  * be relaced with the index name if required.
  *
  */
-var default_template = {
+let default_template = {
   order: 0,
   template: "", // will be replaced with index name
   settings: {

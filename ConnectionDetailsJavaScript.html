@@ -52,7 +52,7 @@
   function onSaveClick() {
     disableButtons();
     toggleLoader();
-    var host = getHost();
+    let host = getHost();
     // First check the connection
     checkClusterConnection(host, onSaveClickCheckHostSuccess);
   }
@@ -75,7 +75,7 @@
   function onSaveClickCheckHostSuccess(msg) {
     $("#was-checked").val(1);
     $("#sidebar-check-button").prop("disabled", true);
-    var host = getHost();
+    let host = getHost();
     saveHostData(host);
   }
 
@@ -109,7 +109,7 @@
     disableButtons();
     toggleLoader();
 
-    var host = getHost();
+    let host = getHost();
     checkClusterConnection(host, checkClusterSuccess);
   }
 
@@ -191,7 +191,7 @@
   function addContinueButton() {
     $("#sidebar-save-button").removeClass();
     if (!$("#sidebar-continue-button").length) {
-      var table = $("#connection-details-table tr:last");
+      let table = $("#connection-details-table tr:last");
       table.after(
         [
           '<td colspan="3" style="text-align:right;">',
