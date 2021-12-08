@@ -1,116 +1,214 @@
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
 <script>
-  var header_timeout_id = 0;
-  var data_timeout_id = 0;
-  var docid_timeout_id = 0;
-  var TIMER_TIMEOUT = 500;
+  let header_timeout_id = 0;
+  let data_timeout_id = 0;
+  let docid_timeout_id = 0;
+  let TIMER_TIMEOUT = 500;
 
-  $(function() {
-    disableButtons();
+  $(function () {
+    disableButtons("#sidebar-push-button");
     enableLoader();
-    $('#sidebar-push-button').click(onPushClick);
-    $('#sidebar-conn-details-button').click(onConnDetailsClick);
-
-    $('#sidebar-docid-range').focus(updateDocIdColumns);
-    updateDocIdColumns();
+    $("#sidebar-push-button").click(onPushClick);
+    $("#sidebar-delete-row-button").click(onDeleteRowClick);
+    $("#sidebar-delete-col-button").click(onDeleteColumnClick);
+    $("#sidebar-conn-details-button").click(onConnDetailsClick);
 
     google.script.run
-      .withSuccessHandler(
-        function(msg) {
-          getSheetName();
-          getDefaultRange();
-          $('#sidebar-type').val('spreadsheet');
-          $('#sidebar-template').val('google_spreadsheet');
-          if(msg.was_checked === "0") {
-            checkHost(msg);
-          } else {
-            enableButtons();
-            disableLoader();
-          }
-        }
-      )
-      .withFailureHandler(
-        function(msg) {
-          showStatus(msg, 'error');
+      .withSuccessHandler(function (msg) {
+        /**getSheetName();*/
+        $("#sidebar-index").val("test-default");
+        getDefaultRange();
+        $("#sidebar-type").val("spreadsheet");
+        $("#sidebar-template").val(""); /**.val('google_spreadsheet')*/
+        if (msg.was_checked === "0") {
+          checkHost(msg);
+        } else {
+          enableButtons("#sidebar-push-button");
           disableLoader();
-        })
+        }
+      })
+      .withFailureHandler(function (msg) {
+        showStatus(msg, "error");
+        disableLoader();
+      })
       .getHostData();
 
-    $('#sidebar-data-range').focus(onDataChange);
-    $('#sidebar-data-range').keyup(onDataChange);
-    $('#sidebar-docid-range').focus(onDocIdChange);
-    $('#sidebar-docid-range').keyup(onDocIdChange);
+    $("#sidebar-data-range").focus(onDataChange);
+    $("#sidebar-data-range").keyup(onDataChange);
 
-    $('#sidebar-index').focus(function() { clearIntervals(); });
-    $('#sidebar-type').focus(function() { clearIntervals(); });
-    $('#sidebar-template').focus(function() { clearIntervals(); });
+    $("#sidebar-index").focus(function () {
+      clearIntervals();
+    });
+    $("#sidebar-type").focus(function () {
+      clearIntervals();
+    });
+    $("#sidebar-template").focus(function () {
+      clearIntervals();
+    });
   });
 
   function updateSpreadsheetHighlight(element_id) {
-    var new_value = $('#'+element_id).val();
-    if(new_value) {
-      if(new_value.length == 1) {
-        new_value += ":"+new_value;
+    let new_value = $("#" + element_id).val();
+    if (new_value) {
+      if (new_value.length == 1) {
+        new_value += ":" + new_value;
       }
       google.script.run
-        .withSuccessHandler(function(msg) {
-          showStatus('');
+        .withSuccessHandler(function (msg) {
+          showStatus("");
           validateData();
         })
-        .withFailureHandler(function(msg) {
-          showStatus(msg, 'error');
+        .withFailureHandler(function (msg) {
+          showStatus(msg, "error");
         })
         .highlightData(new_value);
     }
   }
 
-  function updateDocIdColumns() {
-    google.script.run
-      .withSuccessHandler(function(msg) {
-        if(msg) {
-          if($('#sidebar-docid-range option:gt(0)').length != msg.length) {
-            $('#sidebar-docid-range option:gt(0)').remove();
-            var docid_input = $('#sidebar-docid-range');
-            for(var i in msg) {
-              docid_input.append($("<option></option>").attr("value", msg[i].value).text(msg[i].text));
-            }
-          }
-        }
-      })
-      .withFailureHandler(function(msg) {
-        showStatus(msg, 'error');
-      })
-      .getDocIdOptions();
-  }
-
   function updateRange(element_id) {
-    var elem = $('#'+element_id);
+    let elem = $("#" + element_id);
 
     google.script.run
-      .withSuccessHandler(function(msg) {
-        if(elem.val() != msg) {
+      .withSuccessHandler(function (msg) {
+        if (elem.val() != msg) {
           elem.val(msg);
         }
       })
-      .withFailureHandler(function(msg) {
-        showStatus(msg, 'error');
+      .withFailureHandler(function (msg) {
+        showStatus(msg, "error");
       })
       .getSelectedRange();
   }
 
   function onDataChange() {
     clearTimeout(data_timeout_id);
-    data_timeout_id = setTimeout(function() {
-      updateSpreadsheetHighlight('sidebar-data-range');
+    data_timeout_id = setTimeout(function () {
+      updateSpreadsheetHighlight("sidebar-data-range");
     }, TIMER_TIMEOUT);
-
   }
 
-  function onDocIdChange() {
-    clearTimeout(docid_timeout_id);
-    docid_timeout_id = setTimeout(function() {
-      updateSpreadsheetHighlight('sidebar-docid-range');
-    }, TIMER_TIMEOUT);
+  /**
+   * Get the click event to delete document
+   * in the cluster and clear the data in the
+   * spreadsheet
+   */
+  function onDeleteRowClick() {
+    disableButtons("#sidebar-delete-row-button");
+    enableLoader();
+
+    let index = $("#sidebar-index").val();
+    let index_type = $("#sidebar-type").val();
+    let template_name = $("#sidebar-template").val();
+
+    let data_range = $("#sidebar-data-range").val();
+
+    google.script.run
+      .withSuccessHandler(function (msg) {
+        showStatus('Success! The data from "' + msg + '" was removed');
+        enableButtons("#sidebar-delete-row-button");
+        disableLoader();
+      })
+      .withFailureHandler(function (msg) {
+        showStatus(msg, "error");
+        enableButtons("#sidebar-delete-row-button");
+        disableLoader();
+      })
+      .deleteRow(index, index_type, template_name, data_range);
+  }
+
+  /**
+   * Get the click event to delete document
+   * in the cluster and clear the data in the
+   * spreadsheet
+   */
+  function onDeleteColumnClick() {
+    disableButtons("#sidebar-delete-col-button");
+    enableLoader();
+
+    let index = $("#sidebar-index").val();
+
+    let data_range = $("#sidebar-data-range").val();
+
+    google.script.run
+      .withSuccessHandler(function (col_range) {
+        showStatus('Success! The data from "' + col_range + '" was removed');
+        reindexUpdate();
+      })
+      .withFailureHandler(function (msg) {
+        showStatus(msg, "error");
+        enableButtons("#sidebar-delete-col-button");
+        disableLoader();
+      })
+      .deleteColumn(index, data_range);
+  }
+
+  function reindexUpdate() {
+    let index = $("#sidebar-index").val();
+    let tmp_index = "tmp_index";
+    google.script.run
+      .withSuccessHandler(function (msg) {
+        showStatus(
+          'Success! The data from index"' +
+            msg[0] +
+            '" was re-indexed to ' +
+            msg[1] +
+            "."
+        );
+        deleteOrigIndex();
+      })
+      .withFailureHandler(function (msg) {
+        showStatus(msg, "error");
+        enableButtons("#sidebar-delete-col-button");
+        disableLoader();
+      })
+      .reindexRequest(index, tmp_index);
+  }
+
+  function deleteOrigIndex() {
+    let index = $("#sidebar-index").val();
+    google.script.run
+      .withSuccessHandler(function (msg) {
+        showStatus('Success! The data from index"' + msg + '" was removed');
+        reCreateIndex();
+      })
+      .withFailureHandler(function (msg) {
+        showStatus(msg, "error");
+        enableButtons("#sidebar-delete-col-button");
+        disableLoader();
+      })
+      .deleteRequest(index);
+  }
+
+  function reCreateIndex() {
+    let index = "tmp_index";
+    let tmp_index = $("#sidebar-index").val();
+    google.script.run
+      .withSuccessHandler(function (msg) {
+        showStatus('Success! The data from "' + msg + '" was removed');
+        deleteTmpIndex();
+      })
+      .withFailureHandler(function (msg) {
+        showStatus(msg, "error");
+        enableButtons("#sidebar-delete-col-button");
+        disableLoader();
+      })
+      .reindexRequest(index, tmp_index);
+  }
+
+  function deleteTmpIndex() {
+    let index = "tmp_index";
+    google.script.run
+      .withSuccessHandler(function (msg) {
+        showStatus('Success! The data from "' + msg + '" was removed');
+        enableButtons("#sidebar-delete-col-button");
+        disableLoader();
+      })
+      .withFailureHandler(function (msg) {
+        showStatus(msg, "error");
+        enableButtons("#sidebar-delete-col-button");
+        disableLoader();
+      })
+      .deleteRequest(index);
   }
 
   /**
@@ -119,68 +217,67 @@
    * sidebar text field.
    */
   function onPushClick() {
-    disableButtons();
+    disableButtons("#sidebar-push-button");
     enableLoader();
 
-    var index = $('#sidebar-index').val();
-    var index_type = $('#sidebar-type').val();
-    var template_name = $('#sidebar-template').val();
+    let index = $("#sidebar-index").val();
+    let index_type = $("#sidebar-type").val();
+    let template_name = $("#sidebar-template").val();
 
-    var data_range = $('#sidebar-data-range').val();
-    var doc_id_range = $('#sidebar-docid-range').val();
+    let data_range = $("#sidebar-data-range").val();
 
     google.script.run
-      .withSuccessHandler(
-        function(msg) {
-          showStatus('Success! The data is accessible <a href="'+msg+'" target="_blank">here.</a>');
-          enableButtons();
-          disableLoader();
-        })
-      .withFailureHandler(
-        function(msg) {
-          showStatus(msg, 'error');
-          enableButtons();
-          disableLoader();
-        })
-        .pushDataToCluster(index,index_type,template_name,data_range,doc_id_range);
+      .withSuccessHandler(function (msg) {
+        showStatus(
+          'Success! The data is accessible <a href="' +
+            msg +
+            '" target="_blank">here.</a>'
+        );
+        enableButtons("#sidebar-push-button");
+        disableLoader();
+      })
+      .withFailureHandler(function (msg) {
+        showStatus(msg, "error");
+        enableButtons("#sidebar-push-button");
+        disableLoader();
+      })
+      .pushDataToCluster(index, index_type, template_name, data_range);
   }
 
   function validateData() {
-    var new_value = $('#sidebar-data-range').val();
+    let new_value = $("#sidebar-data-range").val();
     google.script.run
-      .withSuccessHandler(
-        function(msg) {
-          showStatus('');
-        })
-      .withFailureHandler(function(msg) {
-        showStatus(msg, 'error');
+      .withSuccessHandler(function (msg) {
+        showStatus("");
+      })
+      .withFailureHandler(function (msg) {
+        showStatus(msg, "error");
       })
       .validateData(new_value);
   }
 
   function checkHost(host) {
     google.script.run
-      .withSuccessHandler(
-        function(msg) {
-          enableButtons();
-          disableLoader();
-        }
-      )
-      .withFailureHandler(
-        function(msg) {
-          showStatus('Could not connect to your cluster. Please test the connection details.', 'error');
-          disableButtons();
-          disableLoader();
-        }
-      )
+      .withSuccessHandler(function (msg) {
+        enableButtons("#sidebar-push-button");
+        disableLoader();
+      })
+      .withFailureHandler(function (msg) {
+        showStatus(
+          "Could not connect to your cluster. Please test the connection details.",
+          "error"
+        );
+        disableButtons("#sidebar-push-button");
+        disableLoader();
+      })
       .checkClusterConnection(host);
   }
 
   function getSheetName() {
     google.script.run
-      .withSuccessHandler(function(msg) {
-        showStatus('');
-        $('#sidebar-index').val(msg);
+      .withSuccessHandler(function (msg) {
+        showStatus("");
+        $("#sidebar-index").val(msg);
       })
       .getSheetName();
   }
@@ -193,56 +290,55 @@
    *   should be displayed as.
    */
   function showStatus(msg, classId) {
-    $('#sidebar-status').removeClass().html(msg);
+    $("#sidebar-status").removeClass().html(msg);
     if (classId) {
-      $('#sidebar-status').addClass(classId);
+      $("#sidebar-status").addClass(classId);
     }
   }
 
-  function disableButtons() {
-    $("#sidebar-push-button").prop('disabled', true);
+  function disableButtons(buttonId) {
+    $(buttonId).prop("disabled", true);
   }
 
-  function enableButtons() {
-    $("#sidebar-push-button").prop('disabled', false);
+  function enableButtons(buttonId) {
+    $(buttonId).prop("disabled", false);
   }
 
   function enableLoader() {
-    $('#static').removeClass().addClass('hidden');
-    $('#loader').removeClass().addClass('show-inline');
+    $("#static").removeClass().addClass("hidden");
+    $("#loader").removeClass().addClass("show-inline");
   }
 
   function disableLoader() {
-    $('#loader').removeClass().addClass('hidden');
-    $('#static').removeClass().addClass('show-inline');
+    $("#loader").removeClass().addClass("hidden");
+    $("#static").removeClass().addClass("show-inline");
   }
 
   function failure(msg) {
-    showStatus(msg, 'error');
-    enableButtons();
+    showStatus(msg, "error");
+    enableButtons("#sidebar-push-button");
     disableLoader();
   }
 
   function getDefaultRange() {
     google.script.run
-      .withSuccessHandler(function(msg) {
-        showStatus('');
-        if(!$('#sidebar-data-range').val()) {
-          $('#sidebar-data-range').val(msg);
+      .withSuccessHandler(function (msg) {
+        showStatus("");
+        if (!$("#sidebar-data-range").val()) {
+          $("#sidebar-data-range").val(msg);
         }
-        enableButtons();
+        enableButtons("#sidebar-push-button");
         disableLoader();
       })
-      .withFailureHandler(function(msg) {
-        showStatus(msg, 'error');
+      .withFailureHandler(function (msg) {
+        showStatus(msg, "error");
         disableLoader();
       })
       .getDefaultRange();
   }
 
   function onConnDetailsClick() {
-    $('#connection-details-sidebar').removeClass('hidden');
-    $('#push-data-sidebar').addClass('hidden');
+    $("#connection-details-sidebar").removeClass("hidden");
+    $("#push-data-sidebar").addClass("hidden");
   }
-
 </script>

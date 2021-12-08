@@ -1,23 +1,22 @@
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
 <script>
-
-  $(function() {
+  $(function () {
     disableButtons();
     toggleLoader();
-    $('#sidebar-save-button').click(onSaveClick);
-    $('#sidebar-check-button').click(onCheckClick);
-    $('#sidebar-clear-button').click(onClearClick);
-    $('#sidebar-host').keyup(hostChanged);
-    $('#sidebar-port').keyup(hostChanged);
-    $('#sidebar-user').keyup(hostChanged);
-    $('#sidebar-pass').keyup(hostChanged);
-    $('#sidebar-ssl').change(hostChanged);
+    $("#sidebar-save-button").click(onSaveClick);
+    $("#sidebar-check-button").click(onCheckClick);
+    $("#sidebar-clear-button").click(onClearClick);
+    $("#sidebar-host").keyup(hostChanged);
+    $("#sidebar-port").keyup(hostChanged);
+    $("#sidebar-user").keyup(hostChanged);
+    $("#sidebar-pass").keyup(hostChanged);
+    $("#sidebar-ssl").change(hostChanged);
     getHostData(getInitialHostSuccess);
   });
 
   function getHostData(success_function) {
-    if(!success_function) {
-      success_function = function(msg) { };
+    if (!success_function) {
+      success_function = function (msg) {};
     }
     google.script.run
       .withSuccessHandler(success_function)
@@ -26,57 +25,57 @@
   }
 
   function getInitialHostSuccess(msg) {
-    $('#sidebar-host').val(msg.host);
-    $('#sidebar-port').val(msg.port);
-    $('#sidebar-user').val(msg.username);
-    $('#sidebar-pass').val(msg.password);
-    $('#sidebar-ssl').prop('checked', msg.use_ssl);
-    $('#was-checked').val(msg.was_checked);
+    $("#sidebar-host").val(msg.host);
+    $("#sidebar-port").val(msg.port);
+    $("#sidebar-user").val(msg.username);
+    $("#sidebar-pass").val(msg.password);
+    $("#sidebar-ssl").prop("checked", msg.use_ssl);
+    $("#was-checked").val(msg.was_checked);
     enableButtons();
-    if(msg.was_checked === "1") {
-      $("#sidebar-check-button").prop('disabled', true);
+    if (msg.was_checked === "1") {
+      $("#sidebar-check-button").prop("disabled", true);
       addContinueButton();
       onContinueClick();
     } else {
-      $('#connection-details-sidebar').removeClass('hidden');
-      $('#push-data-sidebar').addClass('hidden');
+      $("#connection-details-sidebar").removeClass("hidden");
+      $("#push-data-sidebar").addClass("hidden");
     }
     toggleLoader();
   }
 
   function hostChanged() {
-    $('#was-checked').val(0);
-    $("#sidebar-check-button").prop('disabled', false);
+    $("#was-checked").val(0);
+    $("#sidebar-check-button").prop("disabled", false);
     disableContinueButton();
   }
 
   function onSaveClick() {
     disableButtons();
     toggleLoader();
-    var host = getHost();
+    let host = getHost();
     // First check the connection
-    checkClusterConnection(host,onSaveClickCheckHostSuccess);
+    checkClusterConnection(host, onSaveClickCheckHostSuccess);
   }
 
   function onClearClick() {
     disableButtons();
     enableLoader();
     google.script.run
-      .withSuccessHandler(function() {
+      .withSuccessHandler(function () {
         clearHost();
         hostChanged();
-        showStatus('Data cleared.');
+        showStatus("Data cleared.");
         enableButtons();
         disableLoader();
-      } )
+      })
       .withFailureHandler(failure)
       .clearData();
   }
 
   function onSaveClickCheckHostSuccess(msg) {
-    $('#was-checked').val(1);
-    $("#sidebar-check-button").prop('disabled', true);
-    var host = getHost();
+    $("#was-checked").val(1);
+    $("#sidebar-check-button").prop("disabled", true);
+    let host = getHost();
     saveHostData(host);
   }
 
@@ -88,15 +87,15 @@
   }
 
   function saveClickSuccess(msg) {
-    showStatus('Successfully verified and saved your cluster details.');
+    showStatus("Successfully verified and saved your cluster details.");
     enableButtons();
-    $("#sidebar-check-button").prop('disabled', true);
+    $("#sidebar-check-button").prop("disabled", true);
     addContinueButton();
     toggleLoader();
   }
 
   function failure(msg) {
-    showStatus(msg, 'error');
+    showStatus(msg, "error");
     enableButtons();
     toggleLoader();
   }
@@ -110,11 +109,11 @@
     disableButtons();
     toggleLoader();
 
-    var host = getHost();
-    checkClusterConnection(host,checkClusterSuccess);
+    let host = getHost();
+    checkClusterConnection(host, checkClusterSuccess);
   }
 
-  function checkClusterConnection(host,success_callback) {
+  function checkClusterConnection(host, success_callback) {
     google.script.run
       .withSuccessHandler(success_callback)
       .withFailureHandler(failure)
@@ -122,15 +121,15 @@
   }
 
   function checkClusterSuccess(msg) {
-    showStatus('Successfully connected to your cluster.');
-    $('#was-checked').val(1);
+    showStatus("Successfully connected to your cluster.");
+    $("#was-checked").val(1);
     enableButtons();
     toggleLoader();
-    $("#sidebar-check-button").prop('disabled', true);
+    $("#sidebar-check-button").prop("disabled", true);
   }
 
   function checkClusterFailure(msg) {
-    showStatus(msg, 'error');
+    showStatus(msg, "error");
     enableButtons();
     toggleLoader();
   }
@@ -143,80 +142,83 @@
    *   should be displayed as.
    */
   function showStatus(msg, classId) {
-    $('#sidebar-status').removeClass().html(msg);
+    $("#sidebar-status").removeClass().html(msg);
     if (classId) {
-      $('#sidebar-status').addClass(classId);
+      $("#sidebar-status").addClass(classId);
     }
   }
 
   function toggleLoader() {
-    if($('#static').hasClass('show-inline')) {
-      $('#static').removeClass().addClass('hidden');
-      $('#loader').removeClass().addClass('show-inline');
+    if ($("#static").hasClass("show-inline")) {
+      $("#static").removeClass().addClass("hidden");
+      $("#loader").removeClass().addClass("show-inline");
     } else {
-      $('#loader').removeClass().addClass('hidden');
-      $('#static').removeClass().addClass('show-inline');
+      $("#loader").removeClass().addClass("hidden");
+      $("#static").removeClass().addClass("show-inline");
     }
   }
 
   function disableButtons() {
-    $("#sidebar-save-button").prop('disabled', true);
-    $("#sidebar-check-button").prop('disabled', true);
+    $("#sidebar-save-button").prop("disabled", true);
+    $("#sidebar-check-button").prop("disabled", true);
   }
 
   function enableButtons() {
-    $("#sidebar-save-button").prop('disabled', false);
-    $("#sidebar-check-button").prop('disabled', false);
+    $("#sidebar-save-button").prop("disabled", false);
+    $("#sidebar-check-button").prop("disabled", false);
   }
 
   function getHost() {
     return {
-      host : $('#sidebar-host').val().trim(),
-      port : $('#sidebar-port').val(),
-      username : $('#sidebar-user').val(),
-      password : $('#sidebar-pass').val(),
-      use_ssl : $('#sidebar-ssl').is(':checked'),
-      was_checked : $('#was-checked').val()
+      host: $("#sidebar-host").val().trim(),
+      port: $("#sidebar-port").val(),
+      username: $("#sidebar-user").val(),
+      password: $("#sidebar-pass").val(),
+      use_ssl: $("#sidebar-ssl").is(":checked"),
+      was_checked: $("#was-checked").val(),
     };
   }
 
   function clearHost() {
-    $('#sidebar-host').val('');
-    $('#sidebar-port').val('');
-    $('#sidebar-user').val('');
-    $('#sidebar-pass').val('');
-    $('#sidebar-ssl').attr('checked', false);
-    $('#was-checked').val(0);
+    $("#sidebar-host").val("");
+    $("#sidebar-port").val("");
+    $("#sidebar-user").val("");
+    $("#sidebar-pass").val("");
+    $("#sidebar-ssl").attr("checked", false);
+    $("#was-checked").val(0);
   }
 
   function addContinueButton() {
-    $('#sidebar-save-button').removeClass();
-    if(!$('#sidebar-continue-button').length) {
-      var table = $('#connection-details-table tr:last');
-      table.after(['<td colspan="3" style="text-align:right;">',
-                     '<button id="sidebar-continue-button" class="action">Edit Data Details</button>',
-                   '</td>'].join(''));
-      $('#sidebar-continue-button').click(onContinueClick);
+    $("#sidebar-save-button").removeClass();
+    if (!$("#sidebar-continue-button").length) {
+      let table = $("#connection-details-table tr:last");
+      table.after(
+        [
+          '<td colspan="3" style="text-align:right;">',
+          '<button id="sidebar-continue-button" class="action">Edit Data Details</button>',
+          "</td>",
+        ].join("")
+      );
+      $("#sidebar-continue-button").click(onContinueClick);
     } else {
       enableContinueButton();
     }
   }
 
   function disableContinueButton() {
-    if($('#sidebar-continue-button').length > 0) {
-      $('#sidebar-continue-button').prop('disabled', true);
+    if ($("#sidebar-continue-button").length > 0) {
+      $("#sidebar-continue-button").prop("disabled", true);
     }
   }
 
   function enableContinueButton() {
-    if($('#sidebar-continue-button').length > 0) {
-      $('#sidebar-continue-button').prop('disabled', false);
+    if ($("#sidebar-continue-button").length > 0) {
+      $("#sidebar-continue-button").prop("disabled", false);
     }
   }
 
   function onContinueClick() {
-    $('#connection-details-sidebar').addClass('hidden');
-    $('#push-data-sidebar').removeClass('hidden');
+    $("#connection-details-sidebar").addClass("hidden");
+    $("#push-data-sidebar").removeClass("hidden");
   }
-
 </script>
